@@ -1,0 +1,40 @@
+#settings_plugin_yamlpatcher {
+  textarea.patch {
+    font-family: Monaco,Menlo,Consolas,"Courier New",monospace;
+    font-size: 0.8em;
+    margin-top: 10px;
+  }
+
+  .help-inline {
+    margin-bottom: 10px;
+  }
+
+  pre.diff {
+    margin-top: 10px;
+    font-size: 0.8em;
+    min-height: 340px;
+
+    .added {
+      color: green;
+      background-color: lightgreen;
+    }
+
+    .removed {
+      color: red;
+      background-color: lightpink;
+    }
+
+    .unchanged {
+      color: grey;
+    }
+
+    .separator {
+      color: lightgray;
+    }
+  }
+
+  pre.pre-scrollable {
+    min-height: 200px;
+    max-height: 200px;
+  }
+}
