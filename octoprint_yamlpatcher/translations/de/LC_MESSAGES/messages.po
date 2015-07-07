@@ -1,0 +1,63 @@
+# German translations for OctoPrint-Yamlpatcher.
+# Copyright (C) 2015 The OctoPrint Project
+# This file is distributed under the same license as the
+# OctoPrint-Yamlpatcher project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2015.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OctoPrint-Yamlpatcher 0.1.0\n"
+"Report-Msgid-Bugs-To: i18n@octoprint.org\n"
+"POT-Creation-Date: 2015-07-07 14:42+0200\n"
+"PO-Revision-Date: 2015-07-07 14:46+0100\n"
+"Last-Translator: Gina Häußge <osd@foosel.net>\n"
+"Language-Team: de <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 1.3\n"
+"Language: de\n"
+"X-Generator: Poedit 1.6.8\n"
+
+#: octoprint_yamlpatcher/templates/yamlpatcher_settings.jinja2:1
+msgid ""
+"<strong>Instructions:</strong> Paste a valid patch string into the\n"
+"input field below, then hit the \"Preview\" button. Make sure the changes "
+"look\n"
+"like they should (if a screenshot of a preview was provided along side the\n"
+"patch string, compare!). If they do, hit \"Apply\". Then restart your server."
+msgstr ""
+"<strong>Anleitung:</strong> Füge einen validen Patchstring unten in das "
+"Eingabefeld ein, dann klicke den \"Vorschau\"-Button. Stell sicher, dass "
+"alle Änderungen richtig aussehen (falls ein Screenshot zusammen mit dem "
+"Patch zur Verfügung gestellt wurde, vergleiche ihn!). Wenn alles gut "
+"aussieht, klicke \"Anwenden\". Dann starte Deinen Server neu."
+
+#: octoprint_yamlpatcher/templates/yamlpatcher_settings.jinja2:7
+#, python-format
+msgid ""
+"What you entered is neither a valid Yamlpatcher patch string nor valid YAML. "
+"If you were trying to enter a Yamlpatcher patch string, make sure you copy-"
+"pasted it correctly and maybe take another look at <a href=\"%(patch)s\" "
+"target=\"_blank\">the patch format</a>. If you were trying to enter YAML "
+"yourself, make absolutely sure that your indentation is uniform and only "
+"uses spaces, and maybe take another look at the <a href=\"%(yaml)s\" target="
+"\"_blank\">YAML Primer</a>."
+msgstr ""
+"Was Du eingegeben hast ist weder ein valider Yamlpatcher-Patchstring noch "
+"valides YAML. Falls du versucht hast, einen Yamlpatcher-Patchstring "
+"einzugeben, stelle sicher, dass du ihn correct kopiert hast und schau "
+"vielleicht nochmal in die <a href=\"%(patch)s\" target=\"_blank\">die "
+"Dokumentation des Patchformats</a>. Falls du versucht hast, YAML einzugeben, "
+"stell sicher dass die Einrückung einheitlich ist und ausschließlich "
+"Leerzeichen verwendet, und schau vielleicht nochmal in den <a href=\"%(yaml)s"
+"\" target=\"_blank\">YAML Primer</a>."
+
+#: octoprint_yamlpatcher/templates/yamlpatcher_settings.jinja2:9
+msgid "Preview"
+msgstr "Vorschau"
+
+#: octoprint_yamlpatcher/templates/yamlpatcher_settings.jinja2:13
+msgid "Apply"
+msgstr "Anwenden"
