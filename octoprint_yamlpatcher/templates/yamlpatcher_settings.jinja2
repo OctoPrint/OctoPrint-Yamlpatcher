@@ -4,7 +4,7 @@ like they should (if a screenshot of a preview was provided along side the
 patch string, compare!). If they do, hit "Apply". Then restart your server.{% endtrans %}
 
 <textarea class="patch block" rows="5" data-bind="value: patch, valueUpdate: 'input'"></textarea>
-<span class="help-inline" data-bind="visible: invalidInput">{{ _('What you entered is neither a valid Yamlpatcher patch string nor valid YAML. If you were trying to enter a Yamlpatcher patch string, make sure you copy-pasted it correctly and maybe take another look at <a href="%(patch)s" target="_blank">the patch format</a>. If you were trying to enter YAML yourself, make absolutely sure that your indentation is uniform and only uses spaces, and maybe take another look at the <a href="%(yaml)s" target="_blank">YAML Primer</a>.', patch="", yaml="http://docs.octoprint.org/en/master/configuration/yaml.html") }}</span>
+<span class="help-inline" data-bind="visible: invalidInput">{{ _('What you entered is neither a valid Yamlpatcher patch string nor valid YAML. If you were trying to enter a Yamlpatcher patch string, make sure you copy-pasted it correctly and maybe take another look at <a href="%(patch)s" target="_blank">the patch format</a>. If you were trying to enter YAML yourself, make absolutely sure that your indentation is uniform and only uses spaces, and maybe take another look at the <a href="%(yaml)s" target="_blank">YAML Primer</a>.', patch="https://github.com/OctoPrint/OctoPrint-Yamlpatcher#patch-format", yaml="http://docs.octoprint.org/en/master/configuration/yaml.html") }}</span>
 
 <button class="btn btn-block btn-primary" data-bind="click: preview, enable: patchJson(), css: {disabled: !patchJson()}">{{ _("Preview") }}</button>
 
