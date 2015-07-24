@@ -1,7 +1,12 @@
 # coding=utf-8
 from __future__ import absolute_import
 
+__author__ = "Gina Häußge <osd@foosel.net>"
+__license__ = 'GNU Affero General Public License http://www.gnu.org/licenses/agpl.html'
+__copyright__ = "Copyright (C) 2015 The OctoPrint Project - Released under terms of the AGPLv3 License"
+
 import octoprint.plugin
+import octoprint.events
 
 from octoprint.server import admin_permission
 
@@ -55,7 +60,7 @@ class YamlpatcherPlugin(octoprint.plugin.TemplatePlugin,
 		target = data["target"]
 		patch = data["patch"]
 
-		if target not in ("settings"):
+		if target not in ("settings",):
 			return flask.make_response("Unknown target: {}".format(target), 400)
 
 		if target == "settings":
@@ -89,9 +94,13 @@ class YamlpatcherPlugin(octoprint.plugin.TemplatePlugin,
 		return result
 
 	def _save_settings(self, patched):
-		with open(self._settings._configfile, "wb") as f:
-			self._to_yaml(patched, f)
-		self._settings.load()
+		try:
+			with open(self._settings._configfile, "wb") as f:
+				self._to_yaml(patched, f)
+			self._settings.load()
+			self._event_bus.fire(octoprint.events.Events.SETTINGS_UPDATED)
+		except:
+			self._logger.exception("Error while writing patched settings to {}".format(self._settings._configfile))
 
 	def _to_yaml(self, data, stream=None):
 		import yaml
