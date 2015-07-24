@@ -2,6 +2,8 @@ $(function() {
     function YamlPatcherViewModel(parameters) {
         var self = this;
 
+        self.settingsViewModel = parameters[0];
+
         self.diffView = undefined;
 
         self.patch = ko.observable();
@@ -11,6 +13,9 @@ $(function() {
         self.toBeApplied = ko.observable();
 
         self.invalidInput = ko.observable(false);
+
+        self.previewing = ko.observable(false);
+        self.applying = ko.observable(false);
 
         self.patch.subscribe(function(newValue) {
             self.toBeApplied(undefined);
@@ -140,6 +145,7 @@ $(function() {
                 return;
             }
 
+            self.previewing(true);
             $.ajax({
                 url: API_BASEURL + "plugin/yamlpatcher",
                 type: "POST",
@@ -151,6 +157,8 @@ $(function() {
                 }),
                 contentType: "application/json; charset=UTF-8",
                 success: function(response) {
+                    self.previewing(false);
+
                     var contextSize = 3;
                     var diff = JsDiff.diffLines(response.old, response.new);
 
@@ -212,6 +220,16 @@ $(function() {
                             self.diff.push({text: context.join("\n"), css: "unchanged"});
                         }
                     }
+                },
+                error: function(xhr) {
+                    self.previewing(false);
+                    var html = gettext("The patch could not be previewed.");
+                    html += pnotifyAdditionalInfo('<pre style="overflow: auto">' + xhr.responseText + '</pre>');
+                    new PNotify({
+                        title: gettext("Preview failed"),
+                        text: html,
+                        type: "error"
+                    })
                 }
             })
         };
@@ -221,6 +239,7 @@ $(function() {
                 return;
             }
 
+            self.applying(true);
             $.ajax({
                 url: API_BASEURL + "plugin/yamlpatcher",
                 type: "POST",
@@ -231,22 +250,40 @@ $(function() {
                     patch: self.toBeApplied()
                 }),
                 contentType: "application/json; charset=UTF-8",
-                success: function(response) {
-                    self.patch("");
-                    self.diff.removeAll();
-                    self.toBeApplied(undefined);
+                success: function() {
+                    if (!self.settingsViewModel.hasOwnProperty("onEventSettingsUpdated")) {
+                        self.settingsViewModel.requestData();
+                    }
+                    self._applied();
+                },
+                error: function(xhr) {
+                    self.applying(false);
+                    var html = gettext("The patch could not be applied successfully.");
+                    html += pnotifyAdditionalInfo('<pre style="overflow: auto">' + xhr.responseText + '</pre>');
+                    new PNotify({
+                        title: gettext("Patch failed"),
+                        text: html,
+                        type: "error"
+                    })
                 }
             });
         };
 
+        self._applied = function() {
+            self.applying(false);
+            self.patch("");
+            self.diff.removeAll();
+            self.toBeApplied(undefined);
+        };
+
         self.onStartup = function() {
             self.diffView = $("#settings_plugin_yamlpatcher_diffView");
-        }
+        };
     }
 
     OCTOPRINT_VIEWMODELS.push([
         YamlPatcherViewModel,
-        [],
+        ["settingsViewModel"],
         "#settings_plugin_yamlpatcher"
     ]);
 });
