@@ -38,23 +38,39 @@ class YamlpatcherPlugin(octoprint.plugin.TemplatePlugin,
 
 	def get_cli_commands(self, cli, pass_octoprint_ctx, *args, **kwargs):
 
+		import logging
+		import octoprint.util
+
 		settings = cli._settings
 		plugin_settings = octoprint.plugin.plugin_settings_for_settings_plugin("yamlpatcher", self, settings=settings)
 		if plugin_settings is None:
 			return []
 
+		# make sure we are initialized enough to be able to perform our cli operations
 		self._settings = plugin_settings
 		self._plugin_manager = cli._plugin_manager
+		self._logger = logging.getLogger(__name__)
+
+		# mock event bus & fire method (our settings saving calls it, but we don't
+		# need it, so just use a simple mock)
+		self._event_bus = octoprint.util.Object()
+		self._event_bus.fire = lambda *args, **kwargs: None
+
+		### Let's define our command line interface
 
 		import click
 		import json
 		import sys
+
+		# Custom context to store our global options
 
 		class PatchContext(object):
 			def __init__(self, target="settings", apply=False):
 				self.target = target
 				self.apply = apply
 		pass_patch_ctx = click.make_pass_decorator(PatchContext, ensure=True)
+
+		# Helper to convert values
 
 		conversions = dict(
 			str=str,
@@ -83,6 +99,8 @@ class YamlpatcherPlugin(octoprint.plugin.TemplatePlugin,
 
 			return [operation, path, value]
 
+		# operations
+
 		def operation(patch_ctx, operation, path, value, data_type):
 			"""Perform the specified operation for the given path, value and context."""
 			import difflib
@@ -103,7 +121,7 @@ class YamlpatcherPlugin(octoprint.plugin.TemplatePlugin,
 			# create diff of the unpatched and patched document
 			unpatched_yaml = self.__class__._to_yaml(unpatched)
 			patched_yaml = self.__class__._to_yaml(patched)
-			diff = difflib.unified_diff(unpatched_yaml.split("\n"), patched_yaml.split("\n"), fromfile=patch_ctx.filename + ".old", tofile=patch_ctx.filename)
+			diff = difflib.unified_diff(unpatched_yaml.split("\n"), patched_yaml.split("\n"), fromfile=patch_ctx.filename, tofile=patch_ctx.filename)
 
 			# print the diff ...
 			changes = False
@@ -126,7 +144,6 @@ class YamlpatcherPlugin(octoprint.plugin.TemplatePlugin,
 					# patch config.yaml
 					self._save_settings(patched)
 					click.echo("config.yaml patched, please restart OctoPrint for the changes to take effect")
-
 
 		@click.group("patch")
 		@click.option("--target", type=click.Choice(["settings"]), default="settings",
@@ -190,6 +207,7 @@ class YamlpatcherPlugin(octoprint.plugin.TemplatePlugin,
 			"""Append the value to the list at the given path."""
 			operation(patch_ctx, "append", path, value, data_type)
 
+		# we just return our patch command group
 		return [patch]
 
 	##~~ AssetPlugin
