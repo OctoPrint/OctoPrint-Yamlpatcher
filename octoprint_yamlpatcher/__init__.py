@@ -34,6 +34,164 @@ class YamlpatcherPlugin(octoprint.plugin.TemplatePlugin,
 			)
 		)
 
+	##~~ CLI hook
+
+	def get_cli_commands(self, cli, pass_octoprint_ctx, *args, **kwargs):
+
+		settings = cli._settings
+		plugin_settings = octoprint.plugin.plugin_settings_for_settings_plugin("yamlpatcher", self, settings=settings)
+		if plugin_settings is None:
+			return []
+
+		self._settings = plugin_settings
+		self._plugin_manager = cli._plugin_manager
+
+		import click
+		import json
+		import sys
+
+		class PatchContext(object):
+			def __init__(self, target="settings", apply=False):
+				self.target = target
+				self.apply = apply
+		pass_patch_ctx = click.make_pass_decorator(PatchContext, ensure=True)
+
+		conversions = dict(
+			str=str,
+			int=int,
+			float=float,
+			bool=lambda x: x and x.lower() in ("true", "yes", "y", "1", "on"),
+			json=lambda x: json.loads(x)
+		)
+
+		def convert_value(value, data_type):
+			"""Convert the value into the provided data type."""
+			if not data_type in conversions:
+				raise KeyError()
+			return conversions[data_type](value)
+
+		def create_patch(operation, path, value, data_type="str"):
+			"""Create a patch data structure for the given operation, path and value."""
+			try:
+				value = convert_value(value, data_type)
+			except IndexError:
+				click.echo("Invalid data type: {}".format(data_type))
+				sys.exit(-1)
+			except ValueError:
+				click.echo("Invalid {}: {!r}".format(data_type, value))
+				sys.exit(-1)
+
+			return [operation, path, value]
+
+		def operation(patch_ctx, operation, path, value, data_type):
+			"""Perform the specified operation for the given path, value and context."""
+			import difflib
+
+			# figure out our context
+			apply = patch_ctx.apply
+			confirmed = patch_ctx.confirmed
+			unpatched = patch_ctx.unpatched
+			if unpatched is None:
+				click.echo("Unknown target: {}".format(patch_ctx.target))
+
+			# create the patch
+			patch = create_patch(operation, path, value, data_type=data_type)
+
+			# apply the patch
+			patched = self.__class__._patch(unpatched, [patch])
+
+			# create diff of the unpatched and patched document
+			unpatched_yaml = self.__class__._to_yaml(unpatched)
+			patched_yaml = self.__class__._to_yaml(patched)
+			diff = difflib.unified_diff(unpatched_yaml.split("\n"), patched_yaml.split("\n"), fromfile=patch_ctx.filename + ".old", tofile=patch_ctx.filename)
+
+			# print the diff ...
+			changes = False
+			for line in diff:
+				click.echo(line)
+				changes = True
+
+			# ... or inform that there is no diff
+			if not changes:
+				click.echo("No changes!")
+				sys.exit(0)
+
+			# if we also were asked to apply the patch, make sure the user is absolutely positiv
+			if apply:
+				if not confirmed and not click.confirm("Are you sure you want to apply the above changes?"):
+					click.echo("Changes not applied!")
+					sys.exit(0)
+
+				if patch_ctx.target == "settings":
+					# patch config.yaml
+					self._save_settings(patched)
+					click.echo("config.yaml patched, please restart OctoPrint for the changes to take effect")
+
+
+		@click.group("patch")
+		@click.option("--target", type=click.Choice(["settings"]), default="settings",
+		              help="The target to apply the patch to. Currently only \"settings\" (config.yaml) is supported.")
+		@click.option("--apply", is_flag=True,
+		              help="Whether to also apply the patch. If not set, only a diff will be printed.")
+		@click.option("--yes", "-y", "confirmed", is_flag=True,
+		              help="Overrides the interactive confirmation prompt on patch apply.")
+		@pass_patch_ctx
+		def patch(patch_ctx, target, apply, confirmed):
+			"""Patch a yaml file."""
+			patch_ctx.target = target
+			patch_ctx.apply = apply
+			patch_ctx.confirmed = confirmed
+
+			patch_ctx.unpatched = None
+			patch_ctx.filename = None
+			if target == "settings":
+				self._settings.load()
+				patch_ctx.unpatched = self._settings._config
+				patch_ctx.filename = "config.yaml"
+
+		@patch.command("set")
+		@click.argument("path", type=click.STRING)
+		@click.argument("value", type=click.STRING)
+		@click.option("--type", "data_type", type=click.Choice(["str", "int", "float", "bool", "json"]), default="str")
+		@pass_patch_ctx
+		def set(patch_ctx, path, value, data_type):
+			"""Set the given path to the given value."""
+			operation(patch_ctx, "set", path, value, data_type)
+
+		@patch.command("merge")
+		@click.argument("path", type=click.STRING)
+		@click.argument("value", type=click.STRING)
+		@pass_patch_ctx
+		def merge(patch_ctx, path, value):
+			"""Merge the given value onto the value at the given path."""
+			operation(patch_ctx, "merge", path, value, "json")
+
+		@patch.command("move")
+		@click.argument("source", type=click.STRING)
+		@click.argument("target", type=click.STRING)
+		@pass_patch_ctx
+		def move(patch_ctx, source, target):
+			"""Move the value from source to target."""
+			operation(patch_ctx, "move", source, target, "str")
+
+		@patch.command("remove")
+		@click.argument("path", type=click.STRING)
+		@pass_patch_ctx
+		def remove(patch_ctx, path):
+			"""Remove the value at the given path."""
+			operation(patch_ctx, "remove", path, "", "str")
+
+		@patch.command("append")
+		@click.argument("path", type=click.STRING)
+		@click.argument("value", type=click.STRING)
+		@click.option("--type", "data_type", type=click.Choice(["str", "int", "float", "bool", "json"]), default="str")
+		@pass_patch_ctx
+		def append(patch_ctx, path, value, data_type):
+			"""Append the value to the list at the given path."""
+			operation(patch_ctx, "append", path, value, data_type)
+
+		return [patch]
+
 	##~~ AssetPlugin
 
 	def get_assets(self):
@@ -77,22 +235,6 @@ class YamlpatcherPlugin(octoprint.plugin.TemplatePlugin,
 
 	##~~ Helpers
 
-	def _patch(self, unpatched, patch):
-		import copy
-		result = copy.deepcopy(unpatched)
-
-		from functools import partial
-		actions = ("move", "set", "merge", "append", "remove")
-		funcs = {action: partial(getattr(self.__class__, "_patch_{}".format(action)), result)
-		         for action in actions
-		         if hasattr(self.__class__, "_patch_{}".format(action))}
-
-		normalized = self.__class__._patch_normalize(patch, actions)
-		for action, path, arg in normalized:
-			funcs[action](path, arg)
-
-		return result
-
 	def _save_settings(self, patched):
 		try:
 			with open(self._settings._configfile, "wb") as f:
@@ -102,13 +244,31 @@ class YamlpatcherPlugin(octoprint.plugin.TemplatePlugin,
 		except:
 			self._logger.exception("Error while writing patched settings to {}".format(self._settings._configfile))
 
-	def _to_yaml(self, data, stream=None):
+	@classmethod
+	def _to_yaml(cls, data, stream=None):
 		import yaml
 		return yaml.safe_dump(data,
 		                      stream=stream,
 		                      default_flow_style=False,
 		                      indent="    ",
 		                      allow_unicode=True)
+
+	@classmethod
+	def _patch(cls, unpatched, patch):
+		import copy
+		result = copy.deepcopy(unpatched)
+
+		from functools import partial
+		actions = ("move", "set", "merge", "append", "remove")
+		funcs = {action: partial(getattr(cls, "_patch_{}".format(action)), result)
+		         for action in actions
+		         if hasattr(cls, "_patch_{}".format(action))}
+
+		normalized = cls._patch_normalize(patch, actions)
+		for action, path, arg in normalized:
+			funcs[action](path, arg)
+
+		return result
 
 	@classmethod
 	def _patch_normalize(cls, patch, actions):
@@ -328,5 +488,6 @@ def __plugin_load__():
 
 	global __plugin_hooks__
 	__plugin_hooks__ = {
-		"octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information
+		"octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information,
+		"octoprint.cli.commands": __plugin_implementation__.get_cli_commands
 	}
