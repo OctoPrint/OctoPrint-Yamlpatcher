@@ -41,14 +41,14 @@ class YamlpatcherPlugin(octoprint.plugin.TemplatePlugin,
 		import logging
 		import octoprint.util
 
-		settings = cli._settings
+		settings = cli.settings
 		plugin_settings = octoprint.plugin.plugin_settings_for_settings_plugin("yamlpatcher", self, settings=settings)
 		if plugin_settings is None:
 			return []
 
 		# make sure we are initialized enough to be able to perform our cli operations
 		self._settings = plugin_settings
-		self._plugin_manager = cli._plugin_manager
+		self._plugin_manager = cli.plugin_manager
 		self._logger = logging.getLogger(__name__)
 
 		# mock event bus & fire method (our settings saving calls it, but we don't
