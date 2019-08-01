@@ -1,3 +1,7 @@
+> ⚠ **Note**
+>
+> This plugin targets developers, not endusers. It is not actively maintained since it does what is needed from it for regular OctoPrint development activities. If someone wants to make it more versatile and add more or fix existing functionality, feel free to get in touch about adoption on the [community forums](https://community.octoprint.org/c/plugins) about it.
+
 # OctoPrint Yamlpatcher Plugin
 
 The OctoPrint Yamlpatcher Plugin allows patching OctoPrint's [`config.yaml`](http://docs.octoprint.org/en/master/configuration/config_yaml.html)
